@@ -1,0 +1,930 @@
+openapi: 3.1.0
+info:
+  title: CriptoPass MS Ticket Ticket API
+  description: Microservicio de gestión de boletas para el portal de venta de boletas en línea CriptoPass.
+  version: 1.0.0
+  contact:
+    name: CriptoPass Team
+  license:
+    name: Proprietary
+    identifier: UNLICENSED
+
+servers:
+  - url: /ms-ticket-ticket/v1
+    description: API base path
+
+tags:
+  - name: Public Tickets
+    description: Endpoints públicos para consulta de boletas
+  - name: Customer Tickets
+    description: Gestión de boletas del cliente (compra, transferencia)
+  - name: Admin Tickets
+    description: Gestión administrativa de boletas (requiere rol ADMIN/ORGANIZER)
+  - name: Validation
+    description: Validación de boletas en entrada de eventos
+  - name: Webhooks
+    description: Endpoints internos para integración con servicios externos
+
+paths:
+  /tickets:
+    get:
+      operationId: listMyTickets
+      summary: Listar mis boletas
+      description: Retorna las boletas compradas por el usuario autenticado.
+      tags:
+        - Customer Tickets
+      security:
+        - BearerJWT: []
+      parameters:
+        - name: page
+          in: query
+          required: false
+          schema:
+            type: integer
+            default: 0
+        - name: size
+          in: query
+          required: false
+          schema:
+            type: integer
+            default: 20
+        - name: status
+          in: query
+          required: false
+          schema:
+            $ref: '#/components/schemas/TicketStatus'
+        - name: event_id
+          in: query
+          required: false
+          schema:
+            type: integer
+            format: int64
+      responses:
+        '200':
+          description: Lista paginada de boletas del usuario
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PagedResponseTicketResponse'
+        '401':
+          description: No autenticado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiErrorResponse'
+        '500':
+          description: Error interno del servidor
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiErrorResponse'
+
+  /tickets/{ticketId}:
+    get:
+      operationId: getTicketById
+      summary: Obtener detalle de boleta
+      description: Retorna los datos completos de una boleta. El usuario debe ser el propietario o ADMIN.
+      tags:
+        - Customer Tickets
+      security:
+        - BearerJWT: []
+      parameters:
+        - name: ticketId
+          in: path
+          required: true
+          schema:
+            type: integer
+            format: int64
+      responses:
+        '200':
+          description: Detalle de la boleta
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TicketResponse'
+        '401':
+          description: No autenticado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiErrorResponse'
+        '403':
+          description: Sin permisos
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiErrorResponse'
+        '404':
+          description: Boleta no encontrada
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiErrorResponse'
+        '500':
+          description: Error interno del servidor
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiErrorResponse'
+
+  /tickets/{ticketId}/qr:
+    get:
+      operationId: getTicketQR
+      summary: Obtener QR de la boleta
+      description: Retorna el código QR de la boleta para presentación en entrada.
+      tags:
+        - Customer Tickets
+      security:
+        - BearerJWT: []
+      parameters:
+        - name: ticketId
+          in: path
+          required: true
+          schema:
+            type: integer
+            format: int64
+      responses:
+        '200':
+          description: Código QR de la boleta
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TicketQRResponse'
+        '401':
+          description: No autenticado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiErrorResponse'
+        '403':
+          description: Sin permisos
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiErrorResponse'
+        '404':
+          description: Boleta no encontrada
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiErrorResponse'
+        '500':
+          description: Error interno del servidor
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiErrorResponse'
+
+  /tickets/{ticketId}/transfer:
+    post:
+      operationId: transferTicket
+      summary: Transferir boleta
+      description: Transfiere la propiedad de una boleta a otro usuario.
+      tags:
+        - Customer Tickets
+      security:
+        - BearerJWT: []
+      parameters:
+        - name: ticketId
+          in: path
+          required: true
+          schema:
+            type: integer
+            format: int64
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TicketTransferRequest'
+      responses:
+        '200':
+          description: Boleta transferida exitosamente
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TicketResponse'
+        '400':
+          description: Error de validación
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiErrorResponse'
+        '401':
+          description: No autenticado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiErrorResponse'
+        '403':
+          description: Sin permisos
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiErrorResponse'
+        '404':
+          description: Boleta no encontrada
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiErrorResponse'
+        '409':
+          description: Conflicto de estado - boleta no transferible (VALIDATED, REVOKED, EXPIRED o PENDING_PAYMENT)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiErrorResponse'
+        '500':
+          description: Error interno del servidor
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiErrorResponse'
+
+  /tickets/{ticketId}/revoke:
+    post:
+      operationId: revokeTicket
+      summary: Revocar boleta
+      description: Revoca una boleta (para reembolsos). Requiere rol ADMIN/ORGANIZER.
+      tags:
+        - Admin Tickets
+      security:
+        - BearerJWT: [ADMIN, ORGANIZER]
+      parameters:
+        - name: ticketId
+          in: path
+          required: true
+          schema:
+            type: integer
+            format: int64
+      responses:
+        '200':
+          description: Boleta revocada exitosamente
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TicketResponse'
+        '401':
+          description: No autenticado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiErrorResponse'
+        '403':
+          description: Sin permisos
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiErrorResponse'
+        '404':
+          description: Boleta no encontrada
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiErrorResponse'
+        '409':
+          description: Conflicto de estado - boleta ya revocada o validada
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiErrorResponse'
+        '500':
+          description: Error interno del servidor
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiErrorResponse'
+
+  /tickets/events/{eventId}:
+    get:
+      operationId: listEventTickets
+      summary: Listar boletas de un evento
+      description: Retorna todas las boletas de un evento. Requiere rol ADMIN/ORGANIZER.
+      tags:
+        - Admin Tickets
+      security:
+        - BearerJWT: [ADMIN, ORGANIZER]
+      parameters:
+        - name: eventId
+          in: path
+          required: true
+          schema:
+            type: integer
+            format: int64
+        - name: page
+          in: query
+          required: false
+          schema:
+            type: integer
+            default: 0
+        - name: size
+          in: query
+          required: false
+          schema:
+            type: integer
+            default: 20
+        - name: status
+          in: query
+          required: false
+          schema:
+            $ref: '#/components/schemas/TicketStatus'
+      responses:
+        '200':
+          description: Lista paginada de boletas del evento
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PagedResponseTicketResponse'
+        '401':
+          description: No autenticado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiErrorResponse'
+        '403':
+          description: Sin permisos
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiErrorResponse'
+        '404':
+          description: Evento no encontrado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiErrorResponse'
+        '500':
+          description: Error interno del servidor
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiErrorResponse'
+
+  /validation/scan:
+    post:
+      operationId: scanTicket
+      summary: Escanear boleta
+      description: Escanea y valida una boleta en la entrada del evento.
+      tags:
+        - Validation
+      security:
+        - BearerJWT: [ADMIN, ORGANIZER]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TicketScanRequest'
+      responses:
+        '200':
+          description: Boleta validada exitosamente
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TicketValidationResponse'
+        '400':
+          description: QR inválido
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiErrorResponse'
+        '401':
+          description: No autenticado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiErrorResponse'
+        '403':
+          description: Sin permisos
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiErrorResponse'
+        '409':
+          description: Boleta ya usada o revocada
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiErrorResponse'
+        '500':
+          description: Error interno del servidor
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiErrorResponse'
+
+  /validation/{ticketId}:
+    post:
+      operationId: validateTicket
+      summary: Validar boleta por ID
+      description: Valida una boleta directamente por su ID. Requiere rol ADMIN/ORGANIZER.
+      tags:
+        - Validation
+      security:
+        - BearerJWT: [ADMIN, ORGANIZER]
+      parameters:
+        - name: ticketId
+          in: path
+          required: true
+          schema:
+            type: integer
+            format: int64
+      responses:
+        '200':
+          description: Boleta validada exitosamente
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TicketValidationResponse'
+        '401':
+          description: No autenticado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiErrorResponse'
+        '403':
+          description: Sin permisos
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiErrorResponse'
+        '404':
+          description: Boleta no encontrada
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiErrorResponse'
+        '409':
+          description: Boleta ya usada o revocada
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiErrorResponse'
+        '500':
+          description: Error interno del servidor
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiErrorResponse'
+
+  /ticket-types:
+    get:
+      operationId: listTicketTypes
+      summary: Listar tipos de boleta de un evento
+      description: Retorna los tipos de boleta disponibles para un evento.
+      tags:
+        - Public Tickets
+      parameters:
+        - name: event_id
+          in: query
+          required: true
+          schema:
+            type: integer
+            format: int64
+      responses:
+        '200':
+          description: Lista de tipos de boleta
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/TicketTypeResponse'
+        '400':
+          description: Parámetro requerido faltante (event_id)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiErrorResponse'
+        '404':
+          description: Evento no encontrado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiErrorResponse'
+        '500':
+          description: Error interno del servidor
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiErrorResponse'
+
+  /ticket-types/{ticketTypeId}/purchase:
+    post:
+      operationId: purchaseTicket
+      summary: Comprar boleta
+      description: Inicia el proceso de compra de una boleta. Genera una orden de pago.
+      tags:
+        - Customer Tickets
+      security:
+        - BearerJWT: []
+      parameters:
+        - name: ticketTypeId
+          in: path
+          required: true
+          schema:
+            type: integer
+            format: int64
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TicketPurchaseRequest'
+      responses:
+        '201':
+          description: Orden de compra creada
+          headers:
+            Location:
+              description: URL de la orden de compra creada
+              schema:
+                type: string
+                format: uri
+                example: /ms-ticket-ticket/v1/orders/ORD-2026051501-abc123
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TicketPurchaseResponse'
+        '400':
+          description: Error de validación
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiErrorResponse'
+        '401':
+          description: No autenticado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiErrorResponse'
+        '404':
+          description: Tipo de boleta no encontrado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiErrorResponse'
+        '409':
+          description: Boletas agotadas
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiErrorResponse'
+        '500':
+          description: Error interno del servidor
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiErrorResponse'
+
+  /webhooks/payment/confirmation:
+    post:
+      operationId: paymentConfirmationWebhook
+      summary: Webhook de confirmación de pago
+      description: |
+        Endpoint interno llamado por el Payment Service para confirmar el pago de una orden.
+        Transiciona las boletas asociadas de PENDING_PAYMENT a ACTIVE.
+        Este endpoint es idempotente: confirmaciones repetidas del mismo payment_id no tienen efecto.
+      tags:
+        - Webhooks
+      security:
+        - WebhookSignature: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PaymentConfirmationWebhookRequest'
+      responses:
+        '200':
+          description: Confirmación procesada exitosamente
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaymentConfirmationResponse'
+        '400':
+          description: Payload inválido
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiErrorResponse'
+        '401':
+          description: Firma de webhook inválida
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiErrorResponse'
+        '404':
+          description: Orden no encontrada
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiErrorResponse'
+        '409':
+          description: Orden ya procesada (idempotencia)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiErrorResponse'
+        '500':
+          description: Error interno del servidor
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiErrorResponse'
+
+components:
+  securitySchemes:
+    BearerJWT:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: JWT Bearer token emitido por Keycloak (OAuth2/OIDC)
+    WebhookSignature:
+      type: apiKey
+      in: header
+      name: X-Webhook-Signature
+      description: Firma HMAC-SHA256 del payload para verificar la autenticidad del webhook
+
+  schemas:
+    TicketResponse:
+      type: object
+      properties:
+        id:
+          type: integer
+          format: int64
+        event:
+          $ref: '#/components/schemas/EventSummary'
+        ticket_type:
+          $ref: '#/components/schemas/TicketTypeResponse'
+        owner_id:
+          type: integer
+          format: int64
+        owner_email:
+          type: string
+        price:
+          type: number
+          format: double
+        status:
+          $ref: '#/components/schemas/TicketStatus'
+        qr_code:
+          type: string
+        blockchain_token_id:
+          type: integer
+          format: int64
+        blockchain_tx_hash:
+          type: string
+        seat_number:
+          type: string
+        purchased_at:
+          type: string
+          format: date-time
+        validated_at:
+          type: string
+          format: date-time
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+
+    TicketTypeResponse:
+      type: object
+      properties:
+        id:
+          type: integer
+          format: int64
+        event_id:
+          type: integer
+          format: int64
+        name:
+          type: string
+        description:
+          type: string
+        price:
+          type: number
+          format: double
+        quantity:
+          type: integer
+        available_quantity:
+          type: integer
+        max_per_user:
+          type: integer
+        created_at:
+          type: string
+          format: date-time
+
+    TicketPurchaseRequest:
+      type: object
+      required:
+        - quantity
+      properties:
+        quantity:
+          type: integer
+          minimum: 1
+          maximum: 10
+
+    TicketPurchaseResponse:
+      type: object
+      properties:
+        order_id:
+          type: string
+        ticket_type_id:
+          type: integer
+          format: int64
+        quantity:
+          type: integer
+        total_amount:
+          type: number
+          format: double
+        payment_preference_id:
+          type: string
+        status:
+          type: string
+        created_at:
+          type: string
+          format: date-time
+
+    TicketTransferRequest:
+      type: object
+      required:
+        - recipient_email
+      properties:
+        recipient_email:
+          type: string
+          format: email
+
+    TicketScanRequest:
+      type: object
+      required:
+        - qr_code
+      properties:
+        qr_code:
+          type: string
+          description: Código QR escaneado de la boleta
+
+    TicketValidationResponse:
+      type: object
+      properties:
+        valid:
+          type: boolean
+        ticket:
+          $ref: '#/components/schemas/TicketResponse'
+        message:
+          type: string
+        validated_at:
+          type: string
+          format: date-time
+        validated_by:
+          type: integer
+          format: int64
+
+    TicketQRResponse:
+      type: object
+      properties:
+        ticket_id:
+          type: integer
+          format: int64
+        qr_code:
+          type: string
+        qr_image_url:
+          type: string
+        expires_at:
+          type: string
+          format: date-time
+
+    EventSummary:
+      type: object
+      properties:
+        id:
+          type: integer
+          format: int64
+        name:
+          type: string
+        start_date:
+          type: string
+          format: date-time
+        venue_name:
+          type: string
+
+    TicketStatus:
+      type: string
+      enum:
+        - PENDING_PAYMENT
+        - ACTIVE
+        - TRANSFERRED
+        - VALIDATED
+        - REVOKED
+        - EXPIRED
+
+    PagedResponseTicketResponse:
+      type: object
+      properties:
+        content:
+          type: array
+          items:
+            $ref: '#/components/schemas/TicketResponse'
+        page:
+          type: integer
+        size:
+          type: integer
+        total_elements:
+          type: integer
+        total_pages:
+          type: integer
+
+    ApiErrorResponse:
+      type: object
+      required:
+        - timestamp
+        - status
+        - error
+        - code
+        - message
+        - path
+        - trace_id
+        - details
+      properties:
+        timestamp:
+          type: string
+          format: date-time
+        status:
+          type: integer
+        error:
+          type: string
+        code:
+          type: string
+        message:
+          type: string
+        path:
+          type: string
+        trace_id:
+          type: string
+        details:
+          type: array
+          items:
+            $ref: '#/components/schemas/ApiErrorDetail'
+
+    ApiErrorDetail:
+      type: object
+      required:
+        - field
+        - code
+        - message
+      properties:
+        field:
+          type: string
+        code:
+          type: string
+        message:
+          type: string
+        rejected_value:
+          type: string
+
+    PaymentConfirmationWebhookRequest:
+      type: object
+      required:
+        - order_id
+        - payment_id
+        - status
+        - paid_at
+      properties:
+        order_id:
+          type: string
+          description: ID de la orden de compra generada por este servicio
+        payment_id:
+          type: string
+          description: ID de pago en el Payment Service (para idempotencia)
+        status:
+          type: string
+          enum:
+            - APPROVED
+            - REJECTED
+            - REFUNDED
+          description: Estado del pago
+        paid_at:
+          type: string
+          format: date-time
+          description: Fecha de confirmación del pago
+        amount:
+          type: number
+          format: double
+          description: Monto pagado
+        currency:
+          type: string
+          description: Código de moneda (ISO 4217)
+          example: USD
+
+    PaymentConfirmationResponse:
+      type: object
+      properties:
+        accepted:
+          type: boolean
+          description: true si la confirmación fue procesada, false si fue ignorada por idempotencia
+        order_id:
+          type: string
+        tickets_activated:
+          type: integer
+          description: Cantidad de boletas transicionadas a ACTIVE
+        message:
+          type: string
