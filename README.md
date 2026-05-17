@@ -1,6 +1,6 @@
 # CriptoPass MS Ticket Ticket
 
-## Status: validated-not-executed
+## Status: implemented
 
 Microservicio de gestión de boletas para el portal de venta de boletas en línea **CriptoPass**.
 
@@ -12,9 +12,9 @@ Este microservicio es responsable de la gestión completa del ciclo de vida de l
 
 | Tecnología | Versión | Propósito |
 |---|---|---|
-| Kotlin | 2.x | Lenguaje principal |
-| Spring Boot | 3.x | Framework de aplicación |
-| Gradle | 8.x | Build tool |
+| Kotlin | 2.2.21 | Lenguaje principal |
+| Spring Boot | 4.0.6 | Framework de aplicación |
+| Gradle | 8.14+ | Build tool |
 | Keycloak | - | Autenticación OAuth2/OIDC |
 | PostgreSQL | - | Base de datos relacional |
 | Flyway | - | Migraciones de base de datos |
@@ -194,7 +194,7 @@ stateDiagram-v2
 ### Prerrequisitos
 
 - JDK 21+
-- Gradle 8.x
+- Gradle 8.14+
 - Docker y Docker Compose
 - PostgreSQL 16+
 - Keycloak (para desarrollo local)
@@ -238,6 +238,27 @@ docker compose up -d
 ```bash
 ./gradlew bootJar
 ```
+
+## Estado de Implementación
+
+El microservicio ha sido implementado siguiendo la Arquitectura Hexagonal con las siguientes capas:
+
+| Fase | Estado |
+|------|--------|
+| Configuración del Proyecto | ✅ Implementado |
+| Modelos de Dominio | ✅ Implementado |
+| Excepciones de Dominio | ✅ Implementado |
+| Puertos (Interfaces) | ✅ Implementado |
+| Adaptadores de Salida | ✅ Implementado |
+| Servicios de Aplicación | ✅ Implementado |
+| Controladores REST | ✅ Implementado |
+| Seguridad y Configuración | ✅ Implementado |
+| Migraciones Flyway | ✅ Implementado |
+| DTOs y Mappers | ✅ Implementado |
+| QR Code | ✅ Implementado |
+| Tests | ✅ Implementado |
+
+**Commit**: Ver task board para detalle de cada tarea.
 
 ## Documentación Adicional
 

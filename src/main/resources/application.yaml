@@ -1,0 +1,149 @@
+spring:
+  application:
+    name: ms-ticket-ticket
+  profiles:
+    active: ${SPRING_PROFILES_ACTIVE:dev}
+
+  # DataSource
+  datasource:
+    url: jdbc:postgresql://${DB_HOST:localhost}:${DB_PORT:5432}/${DB_NAME:ticket_db}
+    username: ${DB_USERNAME:ticket_user}
+    password: ${DB_PASSWORD:devpass}
+    driver-class-name: org.postgresql.Driver
+    hikari:
+      maximum-pool-size: ${DB_POOL_SIZE:20}
+      minimum-idle: ${DB_POOL_MIN_IDLE:5}
+      connection-timeout: ${DB_CONNECTION_TIMEOUT:30000}
+
+  # JPA / Hibernate
+  jpa:
+    hibernate:
+      ddl-auto: validate
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.PostgreSQLDialect
+        jdbc:
+          batch_size: 25
+        order_inserts: true
+        order_updates: true
+    show-sql: false
+    open-in-view: false
+
+  # Flyway
+  flyway:
+    enabled: ${FLYWAY_ENABLED:true}
+    locations: ${FLYWAY_LOCATIONS:classpath:db/migration}
+    baseline-on-migrate: ${FLYWAY_BASELINE_ON_MIGRATE:true}
+
+  # OAuth2 Resource Server (Keycloak)
+  security:
+    oauth2:
+      resourceserver:
+        jwt:
+          issuer-uri: ${KEYCLOAK_ISSUER_URI:http://localhost:8080/realms/criptopass}
+
+  # Jackson
+  jackson:
+    serialization:
+      write-dates-as-timestamps: false
+    date-format: com.fasterxml.jackson.databind.util.StdDateFormat
+    default-property-inclusion: non_null
+    property-naming-strategy: SNAKE_CASE
+
+server:
+  port: ${SERVER_PORT:8082}
+
+# Actuator
+management:
+  endpoints:
+    web:
+      exposure:
+        include: ${MANAGEMENT_ENDPOINTS_WEB_EXPOSURE:health,info,metrics,prometheus}
+  endpoint:
+    health:
+      show-details: ${MANAGEMENT_ENDPOINT_HEALTH_SHOW_DETAILS:always}
+  metrics:
+    tags:
+      application: ${spring.application.name}
+
+# Logging
+logging:
+  level:
+    root: ${LOG_LEVEL:INFO}
+    com.criptopass: DEBUG
+    org.springframework: INFO
+    org.hibernate.SQL: WARN
+  pattern:
+    console: "%d{yyyy-MM-dd HH:mm:ss.SSS} [%thread] %-5level %logger{36} - %msg%n"
+
+# SpringDoc OpenAPI
+springdoc:
+  api-docs:
+    path: /api-docs
+  swagger-ui:
+    path: /swagger-ui.html
+    operations-sorter: method
+    tags-sorter: alpha
+  show-actuator: true
+
+# Custom application properties
+app:
+  gateway:
+    base-path: ${GATEWAY_BASE_PATH:/ms-ticket-ticket/v1}
+
+  qr-code:
+    ttl-minutes: ${QR_CODE_TTL_MINUTES:5}
+    secret: ${QR_CODE_SECRET:dev-qr-secret-change-in-production}
+
+  purchase:
+    payment-timeout-minutes: ${PAYMENT_TIMEOUT_MINUTES:15}
+    max-tickets-per-purchase: ${MAX_TICKETS_PER_PURCHASE:10}
+
+  services:
+    payment:
+      url: ${PAYMENT_SERVICE_URL:http://localhost:8083}
+      timeout: ${PAYMENT_SERVICE_TIMEOUT:5000}
+    event:
+      url: ${EVENT_SERVICE_URL:http://localhost:8081}
+      timeout: ${EVENT_SERVICE_TIMEOUT:3000}
+    blockchain:
+      url: ${BLOCKCHAIN_SERVICE_URL:http://localhost:8085}
+      timeout: ${BLOCKCHAIN_SERVICE_TIMEOUT:10000}
+      network: ${BLOCKCHAIN_NETWORK:testnet}
+    user:
+      url: ${USER_SERVICE_URL:http://localhost:8084}
+      timeout: ${USER_SERVICE_TIMEOUT:3000}
+
+  webhook:
+    signature-secret: ${QR_CODE_SECRET:dev-webhook-secret-change-in-production}
+
+  keycloak:
+    client-id: ${KEYCLOAK_CLIENT_ID:ms-ticket-ticket}
+    roles-claim-path: resource_access.${KEYCLOAK_CLIENT_ID:ms-ticket-ticket}.roles
+
+---
+spring:
+  config:
+    activate:
+      on-profile: dev
+
+logging:
+  level:
+    com.criptopass: DEBUG
+
+---
+spring:
+  config:
+    activate:
+      on-profile: prod
+
+logging:
+  level:
+    com.criptopass: WARN
+  pattern:
+    console: "%d{yyyy-MM-dd HH:mm:ss.SSS} %-5level %logger{36} - %msg%n"
+
+management:
+  endpoint:
+    health:
+      show-details: never

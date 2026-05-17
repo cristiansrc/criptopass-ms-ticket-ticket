@@ -28,7 +28,7 @@ summary: Validación final completada. Los 16 hallazgos (14 originales + N-1 + N
 invalidated_by_changes_since: none
 
 ## Decisions locked
-- Stack: Kotlin + Spring Boot 3.x + Gradle
+- Stack: Kotlin 2.2.21 + Spring Boot 4.0.6 + Gradle 8.14+
 - Arquitectura: Hexagonal (Puertos y Adaptadores)
 - Auth: Keycloak OAuth2/OIDC con JWT Bearer
 - DB: PostgreSQL 16+ con Flyway para migraciones
