@@ -6,9 +6,9 @@ spring:
 
   # DataSource
   datasource:
-    url: jdbc:postgresql://${DB_HOST:localhost}:${DB_PORT:5432}/${DB_NAME:ticket_db}
-    username: ${DB_USERNAME:ticket_user}
-    password: ${DB_PASSWORD:devpass}
+    url: jdbc:postgresql://${DB_HOST:localhost}:${DB_PORT:5434}/${DB_NAME:criptopass_ticket}
+    username: ${DB_USERNAME:postgres}
+    password: ${DB_PASSWORD:postgres}
     driver-class-name: org.postgresql.Driver
     hikari:
       maximum-pool-size: ${DB_POOL_SIZE:20}
@@ -51,7 +51,11 @@ spring:
     property-naming-strategy: SNAKE_CASE
 
 server:
-  port: ${SERVER_PORT:8082}
+  port: ${SERVER_PORT:8084}
+  servlet:
+    context-path: /ms-ticket-ticket/v1
+
+# DataSource
 
 # Actuator
 management:
@@ -101,17 +105,17 @@ app:
 
   services:
     payment:
-      url: ${PAYMENT_SERVICE_URL:http://localhost:8083}
+      url: ${PAYMENT_SERVICE_URL:http://localhost:8085}
       timeout: ${PAYMENT_SERVICE_TIMEOUT:5000}
     event:
-      url: ${EVENT_SERVICE_URL:http://localhost:8081}
+      url: ${EVENT_SERVICE_URL:http://localhost:8083}
       timeout: ${EVENT_SERVICE_TIMEOUT:3000}
     blockchain:
-      url: ${BLOCKCHAIN_SERVICE_URL:http://localhost:8085}
+      url: ${BLOCKCHAIN_SERVICE_URL:http://localhost:8086}
       timeout: ${BLOCKCHAIN_SERVICE_TIMEOUT:10000}
       network: ${BLOCKCHAIN_NETWORK:testnet}
     user:
-      url: ${USER_SERVICE_URL:http://localhost:8084}
+      url: ${USER_SERVICE_URL:http://localhost:8082}
       timeout: ${USER_SERVICE_TIMEOUT:3000}
 
   webhook:

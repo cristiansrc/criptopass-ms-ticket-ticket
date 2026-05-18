@@ -77,31 +77,48 @@ tasks.named('test') {
     finalizedBy(tasks.named('jacocoTestReport'))
 }
 
+// Archivos testables según testing-strategy skill
+// Incluidos: Domain Services, Application Services, Domain Models, Mappers manuales
+// Excluidos: Controllers, HTTP Clients, Repository Adapters, DTOs, Entities, Configs, Exceptions, Ports
+def jacocoClasses = files(sourceSets.main.output.classesDirs).collect {
+    fileTree(dir: it, include: [
+        'com/criptopass/ms/ticket/ticket/domain/model/**',
+        'com/criptopass/ms/ticket/ticket/domain/service/**',
+        'com/criptopass/ms/ticket/ticket/application/service/**',
+        'com/criptopass/ms/ticket/ticket/adapter/out/persistence/mapper/**'
+    ], exclude: [
+        '**/dto/**',
+        '**/port/**',
+        '**/exception/**',
+        '**/entity/**',
+        '**/config/**',
+        '**/adapter/in/**',        // Controllers (se testean con integration tests)
+        '**/adapter/out/**/client/**',  // HTTP Clients (infraestructura externa)
+        '**/adapter/out/**/Client.kt', // HTTP Clients
+        '**/adapter/out/persistence/*RepositoryAdapter.kt' // Repository Adapters (se testean con DB)
+    ])
+}
+
 tasks.named('jacocoTestReport') {
-    dependsOn(tasks.named('test'))
+    dependsOn tasks.named('test')
     reports {
         xml.required = true
         html.required = true
         csv.required = false
     }
-    classDirectories.setFrom(
-        files(classDirectories.files.collect {
-            fileTree(dir: it, include: [
-                'com/criptopass/ms/ticket/ticket/domain/**',
-                'com/criptopass/ms/ticket/ticket/application/**',
-            ])
-        })
-    )
+    classDirectories.setFrom jacocoClasses
 }
 
 tasks.named('jacocoTestCoverageVerification') {
+    dependsOn tasks.named('jacocoTestReport')
     violationRules {
         rule {
             limit {
-                minimum = 0.80
+                minimum = 0.85
             }
         }
     }
+    classDirectories.setFrom jacocoClasses
 }
 
 tasks.named('bootJar') {
@@ -109,7 +126,7 @@ tasks.named('bootJar') {
 }
 
 tasks.named('processResources') {
-    dependsOn('copyOpenApiSpec')
+    dependsOn 'copyOpenApiSpec'
 }
 
 tasks.register('copyOpenApiSpec', Copy) {
