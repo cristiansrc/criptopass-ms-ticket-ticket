@@ -18,7 +18,7 @@ spring:
   # JPA / Hibernate
   jpa:
     hibernate:
-      ddl-auto: validate
+      ddl-auto: none
     properties:
       hibernate:
         dialect: org.hibernate.dialect.PostgreSQLDialect
@@ -40,13 +40,10 @@ spring:
     oauth2:
       resourceserver:
         jwt:
-          issuer-uri: ${KEYCLOAK_ISSUER_URI:http://localhost:8080/realms/criptopass}
+          issuer-uri: ${KEYCLOAK_ISSUER_URI:http://localhost:8081/realms/criptopass}
 
   # Jackson
   jackson:
-    serialization:
-      write-dates-as-timestamps: false
-    date-format: com.fasterxml.jackson.databind.util.StdDateFormat
     default-property-inclusion: non_null
     property-naming-strategy: SNAKE_CASE
 
